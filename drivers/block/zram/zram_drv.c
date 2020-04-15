@@ -201,11 +201,20 @@ static inline void update_used_max(struct zram *zram,
 	} while (old_max != cur_max);
 }
 
-static inline void zram_fill_page(void *ptr, unsigned long len,
+static inline void zram_fill_page(char *ptr, unsigned long len,
 					unsigned long value)
 {
+	int i;
+	unsigned long *page = (unsigned long *)ptr;
+
 	WARN_ON_ONCE(!IS_ALIGNED(len, sizeof(unsigned long)));
-	memset_l(ptr, value, len / sizeof(unsigned long));
+
+	if (likely(value == 0)) {
+		memset(ptr, 0, len);
+	} else {
+		for (i = 0; i < len / sizeof(*page); i++)
+			page[i] = value;
+	}
 }
 
 static bool page_same_filled(void *ptr, unsigned long *element)
@@ -293,8 +302,18 @@ static ssize_t idle_store(struct device *dev,
 	struct zram *zram = dev_to_zram(dev);
 	unsigned long nr_pages = zram->disksize >> PAGE_SHIFT;
 	int index;
+	char mode_buf[8];
+	ssize_t sz;
 
-	if (!sysfs_streq(buf, "all"))
+	sz = strscpy(mode_buf, buf, sizeof(mode_buf));
+	if (sz <= 0)
+		return -EINVAL;
+
+	/* ignore trailing new line */
+	if (mode_buf[sz - 1] == '\n')
+		mode_buf[sz - 1] = 0x00;
+
+	if (strcmp(mode_buf, "all"))
 		return -EINVAL;
 
 	down_read(&zram->init_lock);
@@ -637,6 +656,9 @@ static ssize_t writeback_store(struct device *dev,
 	struct page *page;
 	ssize_t ret;
 	int mode;
+	ssize_t ret, sz;
+	char mode_buf[8];
+	int mode = -1;
 	unsigned long blk_idx = 0;
 
 	if (sysfs_streq(buf, "idle"))
@@ -644,6 +666,20 @@ static ssize_t writeback_store(struct device *dev,
 	else if (sysfs_streq(buf, "huge"))
 		mode = HUGE_WRITEBACK;
 	else
+	sz = strscpy(mode_buf, buf, sizeof(mode_buf));
+	if (sz <= 0)
+		return -EINVAL;
+
+	/* ignore trailing newline */
+	if (mode_buf[sz - 1] == '\n')
+		mode_buf[sz - 1] = 0x00;
+
+	if (!strcmp(mode_buf, "idle"))
+		mode = IDLE_WRITEBACK;
+	else if (!strcmp(mode_buf, "huge"))
+		mode = HUGE_WRITEBACK;
+
+	if (mode == -1)
 		return -EINVAL;
 
 	down_read(&zram->init_lock);
