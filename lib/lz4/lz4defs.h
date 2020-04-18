@@ -3,7 +3,6 @@
 
 /*
  * lz4defs.h -- common and architecture specific defines for the kernel usage
-
  * LZ4 - Fast LZ compression algorithm
  * Copyright (C) 2011-2016, Yann Collet.
  * BSD 2-Clause License (http://www.opensource.org/licenses/bsd-license.php)
