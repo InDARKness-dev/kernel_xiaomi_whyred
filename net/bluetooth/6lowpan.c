@@ -938,7 +938,7 @@ static void chan_close_cb(struct l2cap_chan *chan)
 			BT_DBG("dev %p removing %speer %p", dev,
 			       last ? "last " : "1 ", peer);
 			BT_DBG("chan %p orig refcnt %d", chan,
-			       kref_read(&chan->kref));
+			       atomic_read(&chan->kref.refcount));
 
 			l2cap_chan_put(chan);
 			break;

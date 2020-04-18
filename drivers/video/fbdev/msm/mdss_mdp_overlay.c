@@ -1347,7 +1347,7 @@ static void mdss_mdp_overlay_cleanup(struct msm_fb_data_type *mfd,
 			tmp = (struct mdss_mdp_pipe *)pipe->multirect.next;
 			if (tmp)
 				skip_fetch_halt =
-					kref_read(&tmp->kref);
+					atomic_read(&tmp->kref.refcount);
 		}
 
 		/* make sure pipe fetch has been halted before freeing buffer */
